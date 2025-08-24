@@ -1,0 +1,205 @@
+openapi: 3.0.3
+info:
+  title: EODHD Proxy API
+  version: 1.0.0
+  description: |
+    This proxy exposes a small subset of the EODHD end‑of‑day data API over
+    HTTP. It wraps the bulk daily snapshot and historical endpoints and
+    performs simple data formatting. All endpoints are protected by
+    bearer‑token authentication except for the health check.
+servers:
+  - url: https://api.example.com
+    description: Production server (replace with your own domain)
+  - url: http://localhost:3000
+    description: Local development server
+paths:
+  /api/health:
+    get:
+      summary: Health check
+      description: Returns a heartbeat to confirm the service is alive.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  ts:
+                    type: integer
+                    format: int64
+                required:
+                  - ok
+                  - ts
+  /api/eod/bulk-snapshot:
+    post:
+      summary: Retrieve bulk EOD snapshot for a given trade date
+      description: |
+        Fetches end‑of‑day quotes for the specified date from both the
+        Shanghai (SHG) and Shenzhen (SHE) exchanges and returns a combined
+        list. The date must be provided in YYYYMMDD format.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                trade_date:
+                  type: string
+                  description: Date to query in YYYYMMDD format
+              required:
+                - trade_date
+      responses:
+        '200':
+          description: Successful response containing quote data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  count:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BulkItem'
+                required:
+                  - ok
+                  - count
+                  - items
+        '400':
+          description: Invalid request body
+        '401':
+          description: Missing or invalid bearer token
+      security:
+        - bearerAuth: []
+  /api/eod/history:
+    post:
+      summary: Retrieve historical EOD data for multiple symbols
+      description: |
+        For each symbol in the request the service returns an array of
+        daily bars between the start and end dates (inclusive) in
+        ascending order. Symbols should include the exchange code
+        separated by a period (e.g. `600519.SHG`). Dates must be in
+        YYYYMMDD format.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                symbols:
+                  type: array
+                  items:
+                    type: string
+                  description: List of instrument identifiers with exchange codes
+                start_date:
+                  type: string
+                  description: Start date in YYYYMMDD format
+                end_date:
+                  type: string
+                  description: End date in YYYYMMDD format
+              required:
+                - symbols
+                - start_date
+                - end_date
+      responses:
+        '200':
+          description: Historical data grouped by symbol
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/HistoryResult'
+                required:
+                  - ok
+                  - data
+        '400':
+          description: Invalid request body
+        '401':
+          description: Missing or invalid bearer token
+      security:
+        - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    BulkItem:
+      type: object
+      description: Single end‑of‑day quote for an instrument
+      properties:
+        code:
+          type: string
+        date:
+          type: string
+          description: ISO date (YYYY-MM-DD)
+        open:
+          type: number
+        high:
+          type: number
+        low:
+          type: number
+        close:
+          type: number
+        volume:
+          type: integer
+      required:
+        - code
+        - date
+        - open
+        - high
+        - low
+        - close
+        - volume
+    HistoryRow:
+      type: object
+      description: Single day bar for a symbol
+      properties:
+        date:
+          type: string
+          description: ISO date (YYYY-MM-DD)
+        open:
+          type: number
+        high:
+          type: number
+        low:
+          type: number
+        close:
+          type: number
+        volume:
+          type: integer
+      required:
+        - date
+        - open
+        - high
+        - low
+        - close
+        - volume
+    HistoryResult:
+      type: object
+      description: Aggregated historical bars for a single symbol
+      properties:
+        symbol:
+          type: string
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/HistoryRow'
+      required:
+        - symbol
+        - rows
