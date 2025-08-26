@@ -9,7 +9,7 @@ module.exports = {
       // start pm2.config.cjs --watch.
       args: 'start',
       env: {
-        PORT: 3000
+        PORT: 3001
       }
     }
   ]

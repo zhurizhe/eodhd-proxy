@@ -8,7 +8,7 @@ info:
     performs simple data formatting. All endpoints are protected by
     bearer‑token authentication except for the health check.
 servers:
-  - url: https://api.example.com
+  - url: https://eodproxy.web-coding.tech
     description: Production server (replace with your own domain)
   - url: http://localhost:3000
     description: Local development server
