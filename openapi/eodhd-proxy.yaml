@@ -10,8 +10,6 @@ info:
 servers:
   - url: https://eodproxy.web-coding.tech
     description: Production server (replace with your own domain)
-  - url: http://localhost:3000
-    description: Local development server
 paths:
   /api/health:
     get:
